@@ -1,3 +1,4 @@
+
 // Adds common vector methods to an impl.
 
 // The methods here should be supported for all types of $t and all sizes of vector.
@@ -167,6 +168,7 @@ macro_rules! impl_vecn_signed_methods {
         /// Returns a vector containing the absolute value of each element of `self`.
         #[inline(always)]
         pub fn abs(self) -> Self {
+            impl_spirv_float_vec_return_float_vec_call!(self, $t, $vecn, "%new_vec = OpExtInst %vec_type %glsl 4 %in_vec");
             Self($sgntrait::abs(self.0))
         }
 
@@ -177,10 +179,163 @@ macro_rules! impl_vecn_signed_methods {
         /// - `NAN` if the number is `NAN`
         #[inline(always)]
         pub fn signum(self) -> Self {
+            // Rust signnum is different with 0!!!
+            impl_spirv_float_vec_return_float_vec_call!(self, $t, $vecn, "%new_vec = OpExtInst %vec_type %glsl 6 %in_vec");
             Self($sgntrait::signum(self.0))
         }
     };
 }
+
+macro_rules! impl_spirv_as_vec_call {
+    ($sf:expr, $t:ty, $ivecn:ident) => {
+        #[cfg(target_arch = "spirv")]
+        {
+            use core::arch::asm;
+            use glam_macros::*;
+            let mut result: $ivecn  = unsafe { core::mem::uninitialized() };
+            unsafe {
+                asm!(
+                        "%in_vec = OpLoad _ {in_reg}",
+                        "%float_type = OpTypeFloat 32",
+                        concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($ivecn)),
+                        concat!("%new_vec = ", extract__to_F!($t), " %vec_type %in_vec"),
+                        "OpStore {result} %new_vec",
+                        in_reg = in(reg) & $sf,
+                        result = in(reg) &mut result,
+                    )
+                }
+                return result;
+            }
+    };
+}
+
+macro_rules! impl_spirv_as_ivec_call {
+    ($sf:expr, $t:ty, $ivecn:ident) => {
+        #[cfg(target_arch = "spirv")]
+        {
+            use core::arch::asm;
+            use glam_macros::*;
+            let mut result: $ivecn  = unsafe { core::mem::uninitialized() };
+            unsafe {
+                asm!(
+                        "%in_vec = OpLoad _ {in_reg}",
+                        "%int_type = OpTypeInt 32 1",
+                        concat!("%ivec_type = OpTypeVector %int_type ", extract_vec_size!($ivecn)),
+                        concat!("%new_ivec = ", extract__to_S!($t), " %ivec_type %in_vec"),
+                        "OpStore {result} %new_ivec",
+                        in_reg = in(reg) & $sf,
+                        result = in(reg) &mut result,
+                    )
+                }
+                return result;
+            }
+    };
+}
+
+
+
+macro_rules! impl_spirv_float_vec_return_float_call {
+    ($sf:expr, $t: ty, $vecn:ident, $str:expr) => {
+        #[cfg(target_arch = "spirv")]
+        {
+            use core::arch::asm;
+            use glam_macros::*;
+            let mut result: $t = unsafe { core::mem::uninitialized() };
+            unsafe {
+                asm!(
+                    "%glsl = OpExtInstImport \"GLSL.std.450\"",
+                        concat!("%float_type = OpTypeFloat ", extract_scalar_size!($t)),
+                         concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($vecn)),
+                        "%in_vec = OpLoad %vec_type {in_reg}",
+                        $str,
+                        "OpStore {result} %new_scalar",
+                        in_reg = in(reg) & $sf,
+                        result = in(reg) &mut result,
+                    )
+                }
+                return result;
+            }
+    };
+}
+
+
+macro_rules! impl_spirv_float_vec_return_float_vec_call {
+    ($sf:expr, $t: ty, $vecn:ident, $str:expr) => {
+        #[cfg(target_arch = "spirv")]
+        {
+            use core::arch::asm;
+            use glam_macros::*;
+            let mut result: $vecn = unsafe { core::mem::uninitialized() };
+            unsafe {
+                asm!(
+                    "%glsl = OpExtInstImport \"GLSL.std.450\"",
+                        concat!("%float_type = OpTypeFloat ", extract_scalar_size!($t)),
+                         concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($vecn)),
+                        "%in_vec = OpLoad %vec_type {in_reg}",
+                        $str,
+                        "OpStore {result} %new_vec",
+                        in_reg = in(reg) & $sf,
+                        result = in(reg) &mut result,
+                    )
+                }
+                return result;
+            }
+    };
+}
+
+
+macro_rules! impl_spirv_float_vec_binary_operator_call {
+    ($in1:expr, $in2:expr, $t: ty, $vecn:ident, $str:expr) => {
+        #[cfg(target_arch = "spirv")]
+        {
+            use core::arch::asm;
+            use glam_macros::*;
+            let mut result: $vecn = unsafe { core::mem::uninitialized() };
+            unsafe {
+                asm!(
+                    "%glsl = OpExtInstImport \"GLSL.std.450\"",
+                        concat!("%float_type = OpTypeFloat ", extract_scalar_size!($t)),
+                         concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($vecn)),
+                        "%in_vec1 = OpLoad %vec_type {in_reg1}",
+                        "%in_vec2 = OpLoad %vec_type {in_reg2}",
+                        $str,
+                        "OpStore {result} %new_vec",
+                        in_reg1 = in(reg) & $in1,
+                        in_reg2 = in(reg) & $in2,
+                        result = in(reg) &mut result,
+                    )
+                }
+                return result;
+            }
+    };
+}
+
+macro_rules! impl_spirv_binary_vec_scalar_call {
+    ($in1:expr, $in2:expr, $t: ty, $vecn:ident, $str:expr) => {
+        #[cfg(target_arch = "spirv")]
+        {
+            use core::arch::asm;
+            use glam_macros::*;
+            let mut result: $vecn = unsafe { core::mem::uninitialized() };
+            unsafe {
+                asm!(
+                    "%glsl = OpExtInstImport \"GLSL.std.450\"",
+                        concat!("%float_type = OpTypeFloat ", extract_scalar_size!($t)),
+                         concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($vecn)),
+                        "%in_vec = OpLoad %vec_type {in_reg1}",
+                        "%in_scalar = OpLoad %float_type {in_reg2}",
+                        $str,
+                        "OpStore {result} %new_vec",
+                        in_reg1 = in(reg) & $in1,
+                        in_reg2 = in(reg) & $in2,
+                        result = in(reg) &mut result,
+                    )
+                }
+                return result;
+            }
+    };
+}
+
 
 // Adds float type vector methods to an impl.
 // The methods here should be supported for float types of $t and all sizes of vector.
@@ -216,6 +371,7 @@ macro_rules! impl_vecn_float_methods {
         #[doc(alias = "magnitude")]
         #[inline(always)]
         pub fn length(self) -> $t {
+            impl_spirv_float_vec_return_float_call!(self, $t, $vecn, "%new_scalar = OpExtInst %float_type %glsl 66 %in_vec");
             $flttrait::length(self.0)
         }
 
@@ -260,6 +416,7 @@ macro_rules! impl_vecn_float_methods {
         #[must_use]
         #[inline(always)]
         pub fn normalize(self) -> Self {
+            impl_spirv_float_vec_return_float_vec_call!(self, $t, $vecn, "%new_vec = OpExtInst %vec_type %glsl 69 %in_vec");
             Self($flttrait::normalize(self.0))
         }
 
@@ -370,6 +527,7 @@ macro_rules! impl_vecn_float_methods {
         /// Round half-way cases away from 0.0.
         #[inline(always)]
         pub fn round(self) -> Self {
+            impl_spirv_float_vec_return_float_vec_call!(self, $t, $vecn, "%new_vec = OpExtInst %vec_type %glsl 1 %in_vec");
             Self($flttrait::round(self.0))
         }
 
@@ -377,6 +535,7 @@ macro_rules! impl_vecn_float_methods {
         /// element of `self`.
         #[inline(always)]
         pub fn floor(self) -> Self {
+            impl_spirv_float_vec_return_float_vec_call!(self, $t, $vecn, "%new_vec = OpExtInst %vec_type %glsl 8 %in_vec");
             Self($flttrait::floor(self.0))
         }
 
@@ -384,6 +543,7 @@ macro_rules! impl_vecn_float_methods {
         /// each element of `self`.
         #[inline(always)]
         pub fn ceil(self) -> Self {
+            impl_spirv_float_vec_return_float_vec_call!(self, $t, $vecn, "%new_vec = OpExtInst %vec_type %glsl 9 %in_vec");
             Self($flttrait::ceil(self.0))
         }
 
@@ -393,6 +553,7 @@ macro_rules! impl_vecn_float_methods {
         /// Note that this is fast but not precise for large numbers.
         #[inline(always)]
         pub fn fract(self) -> Self {
+            impl_spirv_float_vec_return_float_vec_call!(self, $t, $vecn, "%new_vec = OpExtInst %vec_type %glsl 10 %in_vec");
             self - self.floor()
         }
 
@@ -400,6 +561,7 @@ macro_rules! impl_vecn_float_methods {
         /// `self`.
         #[inline(always)]
         pub fn exp(self) -> Self {
+            impl_spirv_float_vec_return_float_vec_call!(self, $t, $vecn, "%new_vec = OpExtInst %vec_type %glsl 27 %in_vec");
             Self($flttrait::exp(self.0))
         }
 
@@ -554,6 +716,7 @@ macro_rules! impl_vecn_common_traits {
             type Output = Self;
             #[inline(always)]
             fn mul(self, other: $vecn) -> Self {
+                impl_spirv_float_vec_binary_operator_call!(self, other, $t, $vecn, "%new_vec = OpFMul %vec_type %in_vec1 %in_vec2");
                 Self(self.0.mul(other.0))
             }
         }
@@ -569,6 +732,7 @@ macro_rules! impl_vecn_common_traits {
             type Output = Self;
             #[inline(always)]
             fn mul(self, other: $t) -> Self {
+                impl_spirv_binary_vec_scalar_call!(self, other, $t, $vecn, "%new_vec = OpVectorTimesScalar %vec_type %in_vec %in_scalar");
                 Self(self.0.mul_scalar(other))
             }
         }
@@ -584,6 +748,7 @@ macro_rules! impl_vecn_common_traits {
             type Output = $vecn;
             #[inline(always)]
             fn mul(self, other: $vecn) -> $vecn {
+                impl_spirv_binary_vec_scalar_call!(other, self, $t, $vecn, "%new_vec = OpVectorTimesScalar %vec_type %in_vec %in_scalar");
                 $vecn($inner::splat(self).mul(other.0))
             }
         }
@@ -592,6 +757,7 @@ macro_rules! impl_vecn_common_traits {
             type Output = Self;
             #[inline(always)]
             fn add(self, other: $vecn) -> Self {
+                impl_spirv_float_vec_binary_operator_call!(self, other, $t, $vecn, "%new_vec = OpFAdd %vec_type %in_vec1 %in_vec2");
                 Self(self.0.add(other.0))
             }
         }
@@ -630,6 +796,7 @@ macro_rules! impl_vecn_common_traits {
             type Output = Self;
             #[inline(always)]
             fn sub(self, other: $vecn) -> Self {
+                impl_spirv_float_vec_binary_operator_call!(self, other, $t, $vecn, "%new_vec = OpFSub %vec_type %in_vec1 %in_vec2");
                 Self(self.0.sub(other.0))
             }
         }
@@ -898,20 +1065,22 @@ macro_rules! impl_vecn_scalar_bit_op_traits {
 }
 
 macro_rules! impl_as_vec2 {
-    () => {
+    ($t:ty) => {
         /// Casts all elements of `self` to `f32`.
         #[inline(always)]
         pub fn as_vec2(&self) -> Vec2 {
+            impl_spirv_as_vec_call!(*self, $t, Vec2);
             Vec2::new(self.x as f32, self.y as f32)
         }
     };
 }
 
 macro_rules! impl_as_vec3 {
-    () => {
+    ($t:ty) => {
         /// Casts all elements of `self` to `f32`.
         #[inline(always)]
         pub fn as_vec3(&self) -> Vec3 {
+            impl_spirv_as_vec_call!(*self, $t, Vec3);
             Vec3::new(self.x as f32, self.y as f32, self.z as f32)
         }
 
@@ -924,10 +1093,11 @@ macro_rules! impl_as_vec3 {
 }
 
 macro_rules! impl_as_vec4 {
-    () => {
+    ($t:ty) => {
         /// Casts all elements of `self` to `f32`.
         #[inline(always)]
         pub fn as_vec4(&self) -> Vec4 {
+            impl_spirv_as_vec_call!(*self, $t, Vec4);
             Vec4::new(self.x as f32, self.y as f32, self.z as f32, self.w as f32)
         }
     };
@@ -963,31 +1133,35 @@ macro_rules! impl_as_dvec4 {
     };
 }
 
+
 macro_rules! impl_as_ivec2 {
-    () => {
+    ($t: ty) => {
         /// Casts all elements of `self` to `i32`.
         #[inline(always)]
         pub fn as_ivec2(&self) -> IVec2 {
+            impl_spirv_as_ivec_call!(*self, $t, IVec2);
             IVec2::new(self.x as i32, self.y as i32)
         }
     };
 }
 
 macro_rules! impl_as_ivec3 {
-    () => {
+    ($t: ty) => {
         /// Casts all elements of `self` to `i32`.
         #[inline(always)]
         pub fn as_ivec3(&self) -> IVec3 {
+            impl_spirv_as_ivec_call!(*self, $t, IVec3);
             IVec3::new(self.x as i32, self.y as i32, self.z as i32)
         }
     };
 }
 
 macro_rules! impl_as_ivec4 {
-    () => {
+    ($t: ty) => {
         /// Casts all elements of `self` to `i32`.
         #[inline(always)]
         pub fn as_ivec4(&self) -> IVec4 {
+            impl_spirv_as_ivec_call!(*self, $t, IVec4);
             IVec4::new(self.x as i32, self.y as i32, self.z as i32, self.w as i32)
         }
     };

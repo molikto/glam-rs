@@ -1,3 +1,4 @@
+
 /*!
 # glam
 
@@ -241,10 +242,14 @@ The minimum supported Rust version is `1.52.1`.
     future_incompatible,
     nonstandard_style
 )]
+#![feature(asm_experimental_arch)]
 // This would require renaming a lot of stuff, disabling for now.
 #![allow(clippy::upper_case_acronyms)]
 // clippy doesn't like `to_array(&self)`
 #![allow(clippy::wrong_self_convention)]
+#![allow(unreachable_code)]
+#![allow(deprecated)]
+
 
 #[macro_use]
 mod macros;

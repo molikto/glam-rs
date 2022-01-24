@@ -277,7 +277,7 @@ macro_rules! impl_f32_vec3 {
         impl $vec3 {
             impl_vec3_float_methods!(f32, $vec2, $vec3, $vec4, $mask, $inner);
             impl_as_dvec3!();
-            impl_as_ivec3!();
+            impl_as_ivec3!(f32);
             impl_as_uvec3!();
         }
         impl_vec3_float_traits!(f32, $new, $vec2, $vec3, $vec4, $inner);
@@ -348,8 +348,8 @@ pub struct DVec3(pub(crate) XYZF64);
 
 impl DVec3 {
     impl_vec3_float_methods!(f64, DVec2, DVec3, DVec4, BVec3, XYZF64);
-    impl_as_vec3!();
-    impl_as_ivec3!();
+    impl_as_vec3!(f64);
+    impl_as_ivec3!(f64);
     impl_as_uvec3!();
 }
 impl_vec3_float_traits!(f64, dvec3, DVec2, DVec3, DVec4, XYZF64);
@@ -364,7 +364,7 @@ pub struct IVec3(pub(crate) XYZI32);
 impl IVec3 {
     impl_vec3_common_methods!(i32, IVec2, IVec3, IVec4, BVec3, XYZI32);
     impl_vecn_signed_methods!(i32, IVec3, BVec3, XYZI32, SignedVector3);
-    impl_as_vec3!();
+    impl_as_vec3!(i32);
     impl_as_dvec3!();
     impl_as_uvec3!();
 }
@@ -395,9 +395,9 @@ pub struct UVec3(pub(crate) XYZU32);
 
 impl UVec3 {
     impl_vec3_common_methods!(u32, UVec2, UVec3, UVec4, BVec3, XYZU32);
-    impl_as_vec3!();
+    impl_as_vec3!(u32);
     impl_as_dvec3!();
-    impl_as_ivec3!();
+    impl_as_ivec3!(u32);
 }
 impl_vec3_common_traits!(u32, uvec3, UVec2, UVec3, UVec4, XYZU32);
 impl_vecn_eq_hash_traits!(u32, 3, UVec3);
