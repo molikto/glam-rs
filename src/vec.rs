@@ -196,8 +196,8 @@ macro_rules! impl_spirv_as_vec_call {
             unsafe {
                 asm!(
                         "%in_vec = OpLoad _ {in_reg}",
-                        "%float_type = OpTypeFloat 32",
-                        concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($ivecn)),
+                        "%scalar_type = OpTypeFloat 32",
+                        concat!("%vec_type = OpTypeVector %scalar_type ", extract_vec_size!($ivecn)),
                         concat!("%new_vec = ", extract__to_F!($t), " %vec_type %in_vec"),
                         "OpStore {result} %new_vec",
                         in_reg = in(reg) & $sf,
@@ -244,8 +244,8 @@ macro_rules! impl_spirv_float_vec_return_float_call {
             unsafe {
                 asm!(
                     "%glsl = OpExtInstImport \"GLSL.std.450\"",
-                        concat!("%float_type = OpTypeFloat ", extract_scalar_size!($t)),
-                         concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($vecn)),
+                        concat!("%scalar_type = ", extract_scalar_type!($t)),
+                         concat!("%vec_type = OpTypeVector %scalar_type ", extract_vec_size!($vecn)),
                         "%in_vec = OpLoad %vec_type {in_reg}",
                         $str,
                         "OpStore {result} %new_scalar",
@@ -269,8 +269,8 @@ macro_rules! impl_spirv_float_vec_return_float_vec_call {
             unsafe {
                 asm!(
                     "%glsl = OpExtInstImport \"GLSL.std.450\"",
-                        concat!("%float_type = OpTypeFloat ", extract_scalar_size!($t)),
-                         concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($vecn)),
+                        concat!("%scalar_type = ", extract_scalar_type!($t)),
+                         concat!("%vec_type = OpTypeVector %scalar_type ", extract_vec_size!($vecn)),
                         "%in_vec = OpLoad %vec_type {in_reg}",
                         $str,
                         "OpStore {result} %new_vec",
@@ -284,7 +284,7 @@ macro_rules! impl_spirv_float_vec_return_float_vec_call {
 }
 
 
-macro_rules! impl_spirv_float_vec_binary_operator_call {
+macro_rules! impl_spirv_vec_binary_operator_call {
     ($in1:expr, $in2:expr, $t: ty, $vecn:ident, $str:expr) => {
         #[cfg(target_arch = "spirv")]
         {
@@ -294,11 +294,11 @@ macro_rules! impl_spirv_float_vec_binary_operator_call {
             unsafe {
                 asm!(
                     "%glsl = OpExtInstImport \"GLSL.std.450\"",
-                        concat!("%float_type = OpTypeFloat ", extract_scalar_size!($t)),
-                         concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($vecn)),
+                        concat!("%scalar_type = ", extract_scalar_type!($t)),
+                         concat!("%vec_type = OpTypeVector %scalar_type ", extract_vec_size!($vecn)),
                         "%in_vec1 = OpLoad %vec_type {in_reg1}",
                         "%in_vec2 = OpLoad %vec_type {in_reg2}",
-                        $str,
+                        concat!("%new_vec = ", $str," %vec_type %in_vec1 %in_vec2"),
                         "OpStore {result} %new_vec",
                         in_reg1 = in(reg) & $in1,
                         in_reg2 = in(reg) & $in2,
@@ -320,10 +320,10 @@ macro_rules! impl_spirv_binary_vec_scalar_call {
             unsafe {
                 asm!(
                     "%glsl = OpExtInstImport \"GLSL.std.450\"",
-                        concat!("%float_type = OpTypeFloat ", extract_scalar_size!($t)),
-                         concat!("%vec_type = OpTypeVector %float_type ", extract_vec_size!($vecn)),
+                        concat!("%scalar_type = ", extract_scalar_type!($t)),
+                         concat!("%vec_type = OpTypeVector %scalar_type ", extract_vec_size!($vecn)),
                         "%in_vec = OpLoad %vec_type {in_reg1}",
-                        "%in_scalar = OpLoad %float_type {in_reg2}",
+                        "%in_scalar = OpLoad %scalar_type {in_reg2}",
                         $str,
                         "OpStore {result} %new_vec",
                         in_reg1 = in(reg) & $in1,
@@ -371,7 +371,7 @@ macro_rules! impl_vecn_float_methods {
         #[doc(alias = "magnitude")]
         #[inline(always)]
         pub fn length(self) -> $t {
-            impl_spirv_float_vec_return_float_call!(self, $t, $vecn, "%new_scalar = OpExtInst %float_type %glsl 66 %in_vec");
+            impl_spirv_float_vec_return_float_call!(self, $t, $vecn, "%new_scalar = OpExtInst %scalar_type %glsl 66 %in_vec");
             $flttrait::length(self.0)
         }
 
@@ -716,7 +716,7 @@ macro_rules! impl_vecn_common_traits {
             type Output = Self;
             #[inline(always)]
             fn mul(self, other: $vecn) -> Self {
-                impl_spirv_float_vec_binary_operator_call!(self, other, $t, $vecn, "%new_vec = OpFMul %vec_type %in_vec1 %in_vec2");
+                impl_spirv_vec_binary_operator_call!(self, other, $t, $vecn, extract_scalar_mul!($t));
                 Self(self.0.mul(other.0))
             }
         }
@@ -757,7 +757,7 @@ macro_rules! impl_vecn_common_traits {
             type Output = Self;
             #[inline(always)]
             fn add(self, other: $vecn) -> Self {
-                impl_spirv_float_vec_binary_operator_call!(self, other, $t, $vecn, "%new_vec = OpFAdd %vec_type %in_vec1 %in_vec2");
+                impl_spirv_vec_binary_operator_call!(self, other, $t, $vecn, extract_scalar_add!($t));
                 Self(self.0.add(other.0))
             }
         }
@@ -796,7 +796,7 @@ macro_rules! impl_vecn_common_traits {
             type Output = Self;
             #[inline(always)]
             fn sub(self, other: $vecn) -> Self {
-                impl_spirv_float_vec_binary_operator_call!(self, other, $t, $vecn, "%new_vec = OpFSub %vec_type %in_vec1 %in_vec2");
+                impl_spirv_vec_binary_operator_call!(self, other, $t, $vecn, extract_scalar_sub!($t));
                 Self(self.0.sub(other.0))
             }
         }
