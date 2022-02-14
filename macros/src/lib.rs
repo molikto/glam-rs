@@ -3,6 +3,17 @@ use proc_macro::TokenStream;
 
 
 #[proc_macro]
+pub fn extract_scalar_type_is_float(token: TokenStream) -> TokenStream {
+  let typ: String = token.to_string().chars().filter(|n| { n.is_ascii_alphabetic()}).collect();
+  if typ == "f" {
+    "true".parse().unwrap()
+  } else {
+    "false".parse().unwrap()
+  }
+}
+
+
+#[proc_macro]
 pub fn extract_scalar_type(token: TokenStream) -> TokenStream {
   let width : String = token.to_string().chars().filter(|n| { n.is_ascii_digit()}).collect();
   let typ: String = token.to_string().chars().filter(|n| { n.is_ascii_alphabetic()}).collect();
