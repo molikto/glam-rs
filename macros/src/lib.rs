@@ -81,7 +81,7 @@ pub fn extract__to_S(token: TokenStream) -> TokenStream {
     } else if str.as_str() == "f64" {
         "OpConvertFToS"
     } else if str.as_str() == "u32" {
-        "OpSatConvertUToS"
+        "OpBitcast"
     } else {
       panic!();
     };
